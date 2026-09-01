@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Instalar dependências do backend
+        run: npm ci --prefix backend
+
+      - name: Instalar dependências do frontend
+        run: npm ci --prefix frontend
+
+      - name: Testar backend
+        run: npm test --prefix backend
+
+      - name: Buildar frontend
+        run: npm run build --prefix frontend
