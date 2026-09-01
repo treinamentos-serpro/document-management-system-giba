@@ -1,22 +1,17 @@
 const express = require('express');
-const fs = require('node:fs');
-const path = require('node:path');
-const crypto = require('node:crypto');
 const multer = require('multer');
 const documentsController = require('../controllers/documents.controller');
+const storageService = require('../services/storage.service');
 
 const router = express.Router();
-const storageDir = process.env.DMS_STORAGE_DIR || path.join(__dirname, '..', '..', 'storage');
-
-fs.mkdirSync(storageDir, { recursive: true });
+storageService.ensureStorageDir();
 
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
-    callback(null, storageDir);
+    callback(null, storageService.STORAGE_DIR);
   },
   filename: (req, file, callback) => {
-    const safeName = path.basename(file.originalname || 'upload').replace(/[^a-zA-Z0-9_.-]/g, '_');
-    callback(null, `${Date.now()}-${crypto.randomUUID()}-${safeName}`);
+    callback(null, storageService.createStoredFileName(file.originalname));
   },
 });
 

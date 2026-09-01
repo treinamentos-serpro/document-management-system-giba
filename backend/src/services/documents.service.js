@@ -1,24 +1,6 @@
 const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
 const documentsRepository = require('../repositories/documents.repository');
-
-const STORAGE_DIR = process.env.DMS_STORAGE_DIR || path.join(__dirname, '..', '..', 'storage');
-
-function ensureStorageDir() {
-  try {
-    fs.mkdirSync(STORAGE_DIR, { recursive: true });
-  } catch (error) {
-    const storageError = new Error('Não foi possível preparar o diretório de armazenamento local.');
-    storageError.code = 'STORAGE_ERROR';
-    throw storageError;
-  }
-}
-
-function sanitizeFileName(value) {
-  const originalName = String(value || 'arquivo');
-  return path.basename(originalName).replace(/[^a-zA-Z0-9_.-]/g, '_');
-}
+const storageService = require('./storage.service');
 
 function toPublicDocument(document) {
   if (!document) {
@@ -43,12 +25,10 @@ function createDocument({ file, owner }) {
     throw validationError;
   }
 
-  ensureStorageDir();
-
   const id = crypto.randomUUID();
-  const originalName = sanitizeFileName(file.originalname);
-  const resolvedStoredPath = file.path ? String(file.path) : path.join(STORAGE_DIR, `${Date.now()}-${crypto.randomUUID()}-${originalName}`);
-  const storedName = path.basename(resolvedStoredPath);
+  const originalName = storageService.sanitizeFileName(file.originalname);
+  const resolvedStoredPath = String(file.path);
+  const storedName = String(file.filename || storageService.createStoredFileName(originalName));
 
   const document = {
     id,
@@ -82,7 +62,7 @@ function getDocumentForDownload(id) {
     throw notFoundError;
   }
 
-  if (!fs.existsSync(document.storedPath)) {
+  if (!storageService.fileExists(document.storedPath)) {
     const unavailableError = new Error('O arquivo físico não está disponível.');
     unavailableError.code = 'FILE_UNAVAILABLE';
     throw unavailableError;
@@ -96,5 +76,4 @@ module.exports = {
   listDocuments,
   getDocumentById,
   getDocumentForDownload,
-  STORAGE_DIR,
 };
